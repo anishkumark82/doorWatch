@@ -4,7 +4,7 @@ import cv2
 sys.path.append(os.path.dirname(__file__))
 from trt_infer import TRTEngine
 from config import SCRFD_ENGINE, ARCFACE_ENGINE, DB_PATH, GO2RTC_STREAM, CHECK_INTERVAL, CLIP_ENGINE, CLIP_TEXT_EMBEDDINGS_PATH, VISITOR_PHOTOS_DIR
-from recognize import get_embeddings, load_face_db, match_embedding
+from recognize import get_embeddings, load_face_db, match_embedding, is_face_usable
 from classify import DeliveryClassifier
 from notify import build_announcement, AnnouncementGate, speak_announcement, send_push_notification
 from ring_buffer import VisitorRingBuffer
@@ -101,13 +101,19 @@ def main():
                 print(f"Frame shape: {frame.shape}")
                 printed_shape = True
 
+            # Get embeddings for the current image 
+            # 1. Run Scarfd [3 scales] to determine faces [boxes, landmarks]
+            # 2. Run arcface to get the embeddings 
             results = get_embeddings(frame, scrfd, arcface)
 
             if results:
                 outcomes_this_frame = []
                 for r in results:
-                    name, score = match_embedding(r["embedding"], db)
                     ts = time.strftime('%H:%M:%S')
+                    
+                    # Compare with face.json to determine if there is matching embeddings    
+                    name, score = match_embedding(r["embedding"], db)
+                    
                     if name:
                         outcome = ("known", name)
                         text = build_announcement(name=name)

@@ -54,6 +54,30 @@ def get_embeddings(frame, scrfd, arcface, score_threshold=0.5):
 
     return results
 
+import cv2
+
+def is_face_usable(frame, box, min_size=60, blur_threshold=50.0):
+    """Reject a detected face crop that's too small or too blurry to
+    produce a reliable embedding, before spending compute on ArcFace."""
+    x1, y1, x2, y2 = [int(v) for v in box]
+    w, h = x2 - x1, y2 - y1
+    if w < min_size or h < min_size:
+        return False, "too small"
+
+    crop = frame[y1:y2, x1:x2]
+    if crop.size == 0:
+        return False, "empty crop"
+
+    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+    # Variance of the Laplacian is a standard, cheap blur-detection metric:
+    # a sharp image has high-frequency edges (high variance); a blurry one
+    # doesn't. Threshold needs empirical tuning against real captures.
+    blur_score = cv2.Laplacian(gray, cv2.CV_64F).var()
+    if blur_score < blur_threshold:
+        return False, f"too blurry ({blur_score:.1f})"
+
+    return True, "ok"
+
 def load_face_db(db_path):
     with open(db_path) as f:
         return json.load(f)

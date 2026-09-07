@@ -23,7 +23,9 @@ PIPER_MODEL = os.path.join(PIPER_DIR, "en_US-lessac-medium.onnx")
 NTFY_TOPIC = "door-watchman-anish-7f3k2m"
 
 HA_URL = "http://192.168.7.69:8123"
-ALEXA_ENTITY_ID = "media_player.anish_echo_show"
+#ALEXA_ENTITY_ID = "media_player.anish_echo_show"
 HA_TOKEN = os.environ["HA_TOKEN"]
 
 VISITOR_PHOTOS_DIR = os.path.expanduser("~/door-watchman/data/visitor_photos")
+#ALEXA_ENTITIES = ["media_player.anish_echo_show", "media_player.anish_s_echo"]
+ALEXA_ENTITIES = ["media_player.anish_echo_show"]

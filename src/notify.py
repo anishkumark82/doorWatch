@@ -3,7 +3,7 @@ import time
 from collections import deque
 import subprocess
 import os
-from config import PIPER_MODEL, NTFY_TOPIC, HA_URL, HA_TOKEN, ALEXA_ENTITY_ID
+from config import PIPER_MODEL, NTFY_TOPIC, HA_URL, HA_TOKEN, ALEXA_ENTITIES
 import uuid
 import requests
 
@@ -35,7 +35,7 @@ def speak_announcement(text):
     }
     payload = {
         "message": text,
-        "target": [ALEXA_ENTITY_ID],
+        "target": ALEXA_ENTITIES,
         "data": {"type": "announce", "method": "speak"},
     }
     response = requests.post(url, headers=headers, json=payload)
