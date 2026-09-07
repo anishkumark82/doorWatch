@@ -4,7 +4,7 @@ import cv2
 sys.path.append(os.path.dirname(__file__))
 from trt_infer import TRTEngine
 from config import SCRFD_ENGINE, ARCFACE_ENGINE, DB_PATH, GO2RTC_STREAM, CHECK_INTERVAL, CLIP_ENGINE, CLIP_TEXT_EMBEDDINGS_PATH, VISITOR_PHOTOS_DIR
-from recognize import get_embeddings, load_face_db, match_embedding, is_face_usable
+from recognize import get_embeddings, load_face_db, match_embedding
 from classify import DeliveryClassifier
 from notify import build_announcement, AnnouncementGate, speak_announcement, send_push_notification
 from ring_buffer import VisitorRingBuffer
@@ -110,7 +110,6 @@ def main():
                 outcomes_this_frame = []
                 for r in results:
                     ts = time.strftime('%H:%M:%S')
-                    
                     # Compare with face.json to determine if there is matching embeddings    
                     name, score = match_embedding(r["embedding"], db)
                     
