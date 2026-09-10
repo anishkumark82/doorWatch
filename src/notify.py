@@ -3,7 +3,7 @@ import time
 from collections import deque
 import subprocess
 import os
-from config import PIPER_MODEL, NTFY_TOPIC, HA_URL, HA_TOKEN, ALEXA_ENTITIES
+from config import PIPER_MODEL, NTFY_TOPIC, HA_URL, HA_TOKEN, ALEXA_NOTIFY_ENTITIES
 import uuid
 import requests
 
@@ -27,19 +27,15 @@ def build_announcement(name=None, category=None, label=None):
     return "Unknown visitor at the door"
 
 def speak_announcement(text):
-    """Send an announcement to Echo via Home Assistant's Alexa Media Player integration."""
-    url = f"{HA_URL}/api/services/notify/alexa_media"
+    url = f"{HA_URL}/api/services/notify/send_message"
     headers = {
         "Authorization": f"Bearer {HA_TOKEN}",
         "Content-Type": "application/json",
     }
-    payload = {
-        "message": text,
-        "target": ALEXA_ENTITIES,
-        "data": {"type": "announce", "method": "speak"},
-    }
-    response = requests.post(url, headers=headers, json=payload)
-    response.raise_for_status()
+    for entity_id in ALEXA_NOTIFY_ENTITIES:
+        payload = {"entity_id": entity_id, "message": text}
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
 
 class AnnouncementGate:
     """Decides whether a detection outcome should actually be announced.

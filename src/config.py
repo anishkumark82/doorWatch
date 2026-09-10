@@ -27,5 +27,6 @@ HA_URL = "http://192.168.7.69:8123"
 HA_TOKEN = os.environ["HA_TOKEN"]
 
 VISITOR_PHOTOS_DIR = os.path.expanduser("~/door-watchman/data/visitor_photos")
-#ALEXA_ENTITIES = ["media_player.anish_echo_show", "media_player.anish_s_echo"]
-ALEXA_ENTITIES = ["media_player.anish_echo_show"]
+#ALEXA_ENTITIES = ["media_player.anish_echo_show_speak", "media_player.anish_s_echo_speak"]
+#ALEXA_NOTIFY_ENTITIES = ["notify.anish_echo_show_speak", "notify.anish_s_echo_speak"]
+ALEXA_NOTIFY_ENTITIES = ["notify.anish_echo_show_speak"]
