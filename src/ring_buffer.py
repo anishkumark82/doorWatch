@@ -8,12 +8,11 @@ class VisitorRingBuffer:
     """Keeps the last `max_size` unknown-visitor photos on disk.
 
     No separate index file -- each photo's filename encodes everything
-    worth knowing about it (when it was captured, the collapsed category,
-    and the specific CLIP label guess), so the filesystem itself is the
-    source of truth. This avoids an index ever drifting out of sync with
-    what's actually on disk (a manually deleted photo, a crash mid-write,
-    etc. can't leave stale metadata behind if there's no metadata file
-    to go stale).
+    worth knowing about it (when it was captured, and the specific CLIP
+    label guess), so the filesystem itself is the source of truth. This 
+    avoids an index ever drifting out of sync with what's actually on 
+    disk (a manually deleted photo, a crash mid-write, etc. can't leave 
+    stale metadata behind if there's no metadata file to go stale).
 
     Eviction is trivial: filenames sort chronologically as plain strings
     (since the timestamp is a fixed-width prefix), so the oldest photo is
@@ -25,12 +24,12 @@ class VisitorRingBuffer:
         self.max_size = max_size
         os.makedirs(storage_dir, exist_ok=True)
 
-    def add(self, frame, category, label):
+    def add(self, frame, label):
         """Save a photo for an unknown-visitor event. Deletes the oldest
         photo first if the buffer is already at capacity. Returns the
         filename that was written."""
         ts = time.strftime("%Y%m%d_%H%M%S")
-        filename = f"{ts}_{category}_{label}.jpg"
+        filename = f"{ts}_{label}.jpg"
         filepath = os.path.join(self.storage_dir, filename)
 
         # Enforce ring-buffer size by checking what's actually on disk,

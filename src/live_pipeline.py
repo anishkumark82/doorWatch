@@ -3,11 +3,20 @@ import cv2
 
 sys.path.append(os.path.dirname(__file__))
 from trt_infer import TRTEngine
-from config import SCRFD_ENGINE, ARCFACE_ENGINE, DB_PATH, GO2RTC_STREAM, CHECK_INTERVAL, CLIP_ENGINE, CLIP_TEXT_EMBEDDINGS_PATH, VISITOR_PHOTOS_DIR
+from motion import MotionGate
+from config import (SCRFD_ENGINE, ARCFACE_ENGINE, DB_PATH, GO2RTC_STREAM, CLIP_ENGINE, 
+                    CLIP_TEXT_EMBEDDINGS_PATH, VISITOR_PHOTOS_DIR, IDLE_INTERVAL, 
+                    ACTIVE_INTERVAL, MOTION_THRESHOLD, MOTION_MIN_CHANGED_FRACTION, 
+                    FORCE_CHECK_EVERY, LOG_PATH, LOG_IDLE_EVERY)
 from recognize import get_embeddings, load_face_db, match_embedding
 from classify import DeliveryClassifier
 from notify import build_announcement, AnnouncementGate, speak_announcement, send_push_notification
 from ring_buffer import VisitorRingBuffer
+from logging_setup import get_logger, ThrottledLogger
+
+# retrive the logger
+logger = get_logger(LOG_PATH)
+idle_logger = ThrottledLogger(logger, interval=LOG_IDLE_EVERY)
 
 class FrameGrabber:
     """Continuously decodes frames in a background thread, always keeping
@@ -65,41 +74,61 @@ class FrameGrabber:
 
 def main():
     # ---- Load all the model engines -----
-    print("Loading SCRFD engine...")
+    logger.info("Loading SCRFD engine...")
     scrfd = TRTEngine(SCRFD_ENGINE)
 
-    print("Loading ArcFace engine...")
+    logger.info("Loading ArcFace engine...")
     arcface = TRTEngine(ARCFACE_ENGINE)
 
-    print("Loading clip classifier...")
+    logger.info("Loading clip classifier...")
     clip_classifier = DeliveryClassifier(CLIP_ENGINE, CLIP_TEXT_EMBEDDINGS_PATH)
 
-    print("Loading enrolled face database...")
+    logger.info("Loading enrolled face database...")
     db = load_face_db(DB_PATH)
-    print(f"  {len(db)} people enrolled: {list(db.keys())}")
+    logger.info(f"  {len(db)} people enrolled: {list(db.keys())}")
 
-    print(f"Connecting to {GO2RTC_STREAM}...")
+    logger.info(f"Connecting to {GO2RTC_STREAM}...")
     grabber = FrameGrabber(GO2RTC_STREAM)
 
-    print("Setting up announcement debouncing ...")
+    logger.info("Setting up announcement debouncing ...")
     gate = AnnouncementGate(window_size=4, min_hits=2, cooldown_seconds=30)
 
     visitor_buffer = VisitorRingBuffer(VISITOR_PHOTOS_DIR, max_size=50)
-    print("Create the Visitor Buffer instance ....")
+    logger.info("Create the Visitor Buffer instance ....")
 
-    print("Starting live recognition loop. Ctrl+C to stop.\n")
+    motion_gate = MotionGate(threshold=MOTION_THRESHOLD, min_changed_fraction=MOTION_MIN_CHANGED_FRACTION)
+    current_interval = IDLE_INTERVAL
+    last_forced_check = 0
+    logger.info("Starting motion detection logic instance ....")
+
+    logger.info("Starting live recognition loop. Ctrl+C to stop.\n")
     printed_shape = False
 
     try:
         while True:
             frame = grabber.read()
             if frame is None:
-                print("Waiting for first frame...")
+                logger.info("Waiting for first frame...")
                 time.sleep(0.5)
                 continue
             if not printed_shape:
-                print(f"Frame shape: {frame.shape}")
+                logger.info(f"Frame shape: {frame.shape}")
                 printed_shape = True
+
+            now = time.time()
+            # Check if there is any motion detected 
+            motion = motion_gate.has_motion(frame)
+            # if idle is it beyond the FORCE_CHECK_TIME (10sec) ?
+            force_check = (now - last_forced_check) >= FORCE_CHECK_EVERY
+
+            # No motion and no force check avoid running models in GPU
+            if not motion and not force_check:
+                idle_logger.info("Idle -- No motion")
+                current_interval = IDLE_INTERVAL
+                time.sleep(current_interval)
+                continue
+            # Check and retrieve embeddings and set the cuttent time to track last embedding time
+            last_forced_check = now
 
             # Get embeddings for the current image 
             # 1. Run Scarfd [3 scales] to determine faces [boxes, landmarks]
@@ -108,6 +137,7 @@ def main():
 
             if results:
                 outcomes_this_frame = []
+                current_interval = ACTIVE_INTERVAL
                 for r in results:
                     ts = time.strftime('%H:%M:%S')
                     # Compare with face.json to determine if there is matching embeddings    
@@ -116,34 +146,35 @@ def main():
                     if name:
                         outcome = ("known", name)
                         text = build_announcement(name=name)
-                        print(f"[{ts}] Known: {name} (similarity={score:.4f})-> \"{text}\"")
+                        logger.info(f"Known: {name} (similarity={score:.4f})-> \"{text}\"")
                     else:
                         # Unknown and try with clip
-                        category, label, clip_score = clip_classifier.classify_category(frame, r["box"])
-                        outcome = ("unknown", category)
-                        text = build_announcement(category=category, label=label)
+                        label, clip_score = clip_classifier.classify(frame, r["box"])
+                        outcome = ("unknown", label)
+                        text = build_announcement(label=label)
 
-                        print(f"[{ts}] Unknown visitor (best face similarity={score:.4f}) "
-                              f"-- category={category} (specific guess: {label}, score={clip_score:.4f})-> \"{text}\"")
+                        logger.info(f"Unknown visitor (best face similarity={score:.4f}) "
+                              f"-- (specific guess: {label}, score={clip_score:.4f})-> \"{text}\"")
 
                     outcomes_this_frame.append(outcome)
                     if gate.check(outcome):
-                        print(f"[{ts}] >>> ANNOUNCE: \"{text}\"")
+                        logger.info(f">>> ANNOUNCE: \"{text}\"")
                         speak_announcement(text)
                         send_push_notification(text)
                         if not name:  # only save photos for unknown visitors
-                            saved_as = visitor_buffer.add(frame, category, label)
-                            print(f"[{ts}]     saved: {saved_as}")
+                            saved_as = visitor_buffer.add(frame, label)
+                            logger.info(f"<<< saved: {saved_as}")
                     else:
-                        print(f"[{ts}]     (suppressed)")
+                        logger.info(f"*** (suppressed)")
                 assert len(outcomes_this_frame) == len(results), \
                         f"Mismatch: {len(results)} detections but {len(outcomes_this_frame)} outcomes"
             else:
-                print(f"[{time.strftime('%H:%M:%S')}] No face detected", end="\r")
-            time.sleep(CHECK_INTERVAL)
+                idle_logger.info(f"Idle -- No face detected")
+                current_interval = IDLE_INTERVAL
+            time.sleep(current_interval)
 
     except KeyboardInterrupt:
-        print("\nStopping...")
+        logger.info(".... Stopping ....")
         grabber.stop()
 
 if __name__ == "__main__":

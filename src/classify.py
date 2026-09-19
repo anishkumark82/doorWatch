@@ -4,17 +4,9 @@ import cv2
 
 sys.path.append(os.path.dirname(__file__))
 from utils import bgr_to_clip_input
-from config import CLIP_TEXT_EMBEDDINGS_PATH
+from config import CLIP_TEXT_EMBEDDINGS_PATH, LOG_IDLE_EVERY
 from trt_infer import TRTEngine
 
-DELIVERY_CATEGORY_MAP = {
-    "amazon_delivery": "possible_delivery",
-    "fedex_delivery": "possible_delivery",
-    "ups_delivery": "possible_delivery",
-    "food_delivery": "possible_delivery",
-    "food_delivery_branded": "possible_delivery",
-    "regular_visitor": "regular_visitor",
-}
 class DeliveryClassifier:
     def __init__(self, clip_engine_path, text_embeddings_path):
         self.engine = TRTEngine(clip_engine_path)
@@ -34,24 +26,24 @@ class DeliveryClassifier:
         y2 = min(h, y2 + pad_y)
         return frame[y1:y2, x1:x2]
 
-    def classify(self, frame, box):
-        region = self.crop_person_region(frame, box)
+    def embed(self, region):
+        """Return the normalized CLIP image embedding for a region, without
+            comparing it against any text categories. classify() uses this
+            internally; photo-search ingestion calls it directly, since it needs
+            the raw vector rather than a category label."""
+            
         inp = bgr_to_clip_input(region, size=(224, 224))
         outputs = self.engine.infer(inp)
         img_emb = outputs[self.engine.output_names[0]]
         img_emb = img_emb.flatten()
-        img_emb = img_emb / np.linalg.norm(img_emb)
+        return img_emb / np.linalg.norm(img_emb)
 
+    def classify(self, frame, box):
+        region = self.crop_person_region(frame, box)
+        img_emb = self.embed(region)
         scores = self.text_embeddings @ img_emb
         best_idx = np.argmax(scores)
         return self.labels[best_idx], float(scores[best_idx])
-
-    def classify_category(self, frame, box):
-        """Same as classify(), but returns the collapsed category
-        (possible_delivery / regular_visitor) rather than the specific brand label."""
-        label, score = self.classify(frame, box)
-        category = DELIVERY_CATEGORY_MAP[label]
-        return category, label, score
 
 if __name__ == "__main__":
     from config import CLIP_ENGINE, CLIP_TEXT_EMBEDDINGS_PATH
@@ -69,6 +61,5 @@ if __name__ == "__main__":
     # determine the width and ht
     h, w = img.shape[:2]
     full_box = (0, 0, w, h)
-    #label, score = classifier.classify(img, full_box)
-    category, label, score = classifier.classify_category(img, full_box)
-    print(f"\nBest match: {label} (score={score:.4f}) Category : {category}")
+    label, score = classifier.classify(img, full_box)
+    print(f"\nBest match: {label} (score={score:.4f}) label : {label}")

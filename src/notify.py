@@ -11,18 +11,15 @@ def send_push_notification(text):
     """Send a push notification via ntfy.sh."""
     requests.post(f"https://ntfy.sh/{NTFY_TOPIC}", data=text.encode("utf-8"))
 
-def build_announcement(name=None, category=None, label=None):
+def build_announcement(name=None, label=None):
     """Produce the human-facing text for a detection outcome.
 
     name     -- set when ArcFace matched a known enrolled person
-    category -- set when unknown: either "possible_delivery" or "regular_visitor"
-    label    -- the specific CLIP guess (e.g. "amazon_delivery"), kept for
-                logging only -- not used to decide the wording here, since
-                brand-level accuracy isn't reliable enough to announce on directly
+    label    -- set when unknown: either "possible_delivery" or "regular_visitor"
     """
     if name:
         return f"{name.capitalize()} is here"
-    if category == "possible_delivery":
+    if label == "possible_delivery":
         return "Possible delivery at the door"
     return "Unknown visitor at the door"
 
@@ -41,32 +38,31 @@ class AnnouncementGate:
     """Decides whether a detection outcome should actually be announced.
 
     Two problems this solves:
-      1. Flip-flopping: borderline similarity scores (or a person turning
-         slightly off-angle mid-approach) can make the same real person
-         alternate between "known" and "unknown" from one check to the next.
-         A strict "must repeat N times in a row" rule would never fire in
-         that case, since the count resets on every flip. Instead, this uses
-         a short rolling window and requires an outcome to appear at least
-         min_hits times *within* that window -- tolerant of occasional
-         misses, still resistant to one-off noise.
-      2. Repeat-announcing: without a cooldown, a person standing at the
-         door for 30 seconds would trigger a fresh announcement on every
-         single check (once per second, per CHECK_INTERVAL).
+    1. Flip-flopping: borderline similarity scores (or a person turning
+        slightly off-angle mid-approach) can make the same real person
+        alternate between "known" and "unknown" from one check to the next.
+        A strict "must repeat N times in a row" rule would never fire in
+        that case, since the count resets on every flip. Instead, this uses
+        a short rolling window and requires an outcome to appear at least
+        min_hits times *within* that window -- tolerant of occasional
+        misses, still resistant to one-off noise.
+    2. Repeat-announcing: without a cooldown, a person standing at the
+        door for a while would trigger a fresh announcement on every
+        single check.
 
     Multiple people at once are handled by keying all state on the outcome
-    itself (e.g. ("known", "anish") vs ("unknown", "possible_delivery")),
+    itself (e.g. ("known", "anish") vs ("unknown", "regular_visitor")),
     not on detection order or box index -- so two different people never
     interfere with each other's tracking, and a person's identity/category
     stays correctly tracked even if their position in the frame's detection
     list changes between checks.
 
-    Known limitation: two DIFFERENT unknown people who both land in the same
-    category (e.g. two separate unrecognized delivery drivers) currently
-    share one outcome key, ("unknown", "possible_delivery") -- there's no
-    name to distinguish them, so the second one could be suppressed by the
-    first one's cooldown. Not solved here; would need a secondary signal
-    (e.g. embedding similarity between the two unknown faces) to tell them
-    apart.
+    Known limitation: two DIFFERENT unknown people who land in the same
+    CLIP category (e.g. two separate unrecognized delivery drivers) share
+    one outcome key -- there's no name to distinguish them, so the second
+    one could be suppressed by the first one's cooldown. Not solved here;
+    would need a secondary signal (e.g. embedding similarity between the
+    two unknown faces) to tell them apart.
     """
 
     def __init__(self, window_size=4, min_hits=2, cooldown_seconds=30):

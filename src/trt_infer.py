@@ -3,6 +3,9 @@ import pycuda.driver as cuda
 import pycuda.autoinit
 import numpy as np
 
+import logging
+logger = logging.getLogger("door-watchman")
+
 TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
 
 class TRTEngine:
@@ -58,7 +61,7 @@ class TRTEngine:
             else:
                 self.output_names.append(name)
 
-        print(f"Loaded engine: inputs={self.input_names}, outputs={self.output_names}")
+        logger.info(f"Loaded engine: inputs={self.input_names}, outputs={self.output_names}")
 
     def infer(self, input_data):
         # Accepts a single array (models with one input, e.g. ArcFace/CLIP)

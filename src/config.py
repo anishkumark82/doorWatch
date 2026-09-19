@@ -12,7 +12,6 @@ DB_PATH = os.path.expanduser("~/door-watchman/data/faces.json")
 PHOTOS_DIR = os.path.expanduser("~/door-watchman/enroll_photos")
 
 GO2RTC_STREAM = "rtsp://localhost:8554/front_door"
-CHECK_INTERVAL = 1.0  # seconds between recognition checks
 
 CLIP_ENGINE = os.path.join(MODELS_DIR, "clip_image_encoder_fp16.engine")
 CLIP_TEXT_EMBEDDINGS_PATH = os.path.expanduser("~/door-watchman/data/clip_text_embeddings.npz")
@@ -28,5 +27,18 @@ HA_TOKEN = os.environ["HA_TOKEN"]
 
 VISITOR_PHOTOS_DIR = os.path.expanduser("~/door-watchman/data/visitor_photos")
 #ALEXA_ENTITIES = ["media_player.anish_echo_show_speak", "media_player.anish_s_echo_speak"]
-#ALEXA_NOTIFY_ENTITIES = ["notify.anish_echo_show_speak", "notify.anish_s_echo_speak"]
-ALEXA_NOTIFY_ENTITIES = ["notify.anish_echo_show_speak"]
+ALEXA_NOTIFY_ENTITIES = ["notify.anish_echo_show_speak", "notify.anish_s_echo_speak"]
+#ALEXA_NOTIFY_ENTITIES = ["notify.anish_echo_show_speak"]
+
+# Reduce load on Jetson to reduce the running of GPU if there is no change in pixel
+IDLE_INTERVAL = 3.0      # when nothing's around
+ACTIVE_INTERVAL = 1.0  # your existing 1.0, once something's detected
+
+MOTION_THRESHOLD = 25
+MOTION_MIN_CHANGED_FRACTION = 0.01
+FORCE_CHECK_EVERY = 10  # seconds -- run a real detection check on this cadence
+                        # even with no motion, so a stationary person still
+                        # eventually gets recognized
+
+LOG_PATH = os.path.expanduser("~/door-watchman/live_pipeline.log")
+LOG_IDLE_EVERY = 60  # seconds -- log a heartbeat this often while idle, not every cycle

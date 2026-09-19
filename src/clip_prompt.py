@@ -4,13 +4,18 @@ import torch
 import clip
 import numpy as np
 from config import CLIP_TEXT_EMBEDDINGS_PATH
-
+'''
 PROMPTS = {
     "amazon_delivery": "a person wearing an Amazon delivery uniform",
     "fedex_delivery": "a person wearing a FedEx uniform",
     "ups_delivery": "a person wearing a UPS uniform",
     "food_delivery": "a person carrying an insulated food delivery bag",
     "food_delivery_branded": "a person wearing DoorDash or Uber Eats branded gear",
+    "regular_visitor": "a person with no delivery indicators, a regular visitor",
+}
+'''
+PROMPTS = {
+    "possible_delivery": "a person wearing a delivery uniform or carrying a delivery bag/package",
     "regular_visitor": "a person with no delivery indicators, a regular visitor",
 }
 
