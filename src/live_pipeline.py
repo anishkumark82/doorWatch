@@ -7,7 +7,7 @@ from motion import MotionGate
 from config import (SCRFD_ENGINE, ARCFACE_ENGINE, DB_PATH, GO2RTC_STREAM, CLIP_ENGINE, 
                     CLIP_TEXT_EMBEDDINGS_PATH, VISITOR_PHOTOS_DIR, IDLE_INTERVAL, 
                     ACTIVE_INTERVAL, MOTION_THRESHOLD, MOTION_MIN_CHANGED_FRACTION, 
-                    FORCE_CHECK_EVERY, LOG_PATH, LOG_IDLE_EVERY)
+                    FORCE_CHECK_EVERY, LOG_PATH, LOG_IDLE_EVERY, GATE_COOLDOWN_SECONDS)
 from recognize import get_embeddings, load_face_db, match_embedding
 from classify import DeliveryClassifier
 from notify import build_announcement, AnnouncementGate, speak_announcement, send_push_notification
@@ -91,7 +91,7 @@ def main():
     grabber = FrameGrabber(GO2RTC_STREAM)
 
     logger.info("Setting up announcement debouncing ...")
-    gate = AnnouncementGate(window_size=4, min_hits=2, cooldown_seconds=30)
+    gate = AnnouncementGate(window_size=4, min_hits=2, cooldown_seconds=GATE_COOLDOWN_SECONDS)
 
     visitor_buffer = VisitorRingBuffer(VISITOR_PHOTOS_DIR, max_size=50)
     logger.info("Create the Visitor Buffer instance ....")

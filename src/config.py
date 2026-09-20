@@ -27,9 +27,9 @@ HA_TOKEN = os.environ["HA_TOKEN"]
 
 VISITOR_PHOTOS_DIR = os.path.expanduser("~/door-watchman/data/visitor_photos")
 #ALEXA_ENTITIES = ["media_player.anish_echo_show_speak", "media_player.anish_s_echo_speak"]
-ALEXA_NOTIFY_ENTITIES = ["notify.anish_echo_show_speak", "notify.anish_s_echo_speak"]
+ALEXA_NOTIFY_ENTITIES = ["notify.anish_echo_show_announce", "notify.anish_s_echo_announce"]
 #ALEXA_NOTIFY_ENTITIES = ["notify.anish_echo_show_speak"]
-
+GATE_COOLDOWN_SECONDS = 10 # 10 sec
 # Reduce load on Jetson to reduce the running of GPU if there is no change in pixel
 IDLE_INTERVAL = 3.0      # when nothing's around
 ACTIVE_INTERVAL = 1.0  # your existing 1.0, once something's detected

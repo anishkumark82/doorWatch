@@ -9,10 +9,12 @@ from trt_infer import TRTEngine
 from utils import bgr_to_model_input
 from scrfd_utils import detect_faces, scale_detections
 from config import SCRFD_ENGINE, ARCFACE_ENGINE, DB_PATH
+import logging
+logger = logging.getLogger("door-watchman")
 
 TEST_IMAGE = os.path.expanduser("~/door-watchman/test_image.jpg")
 
-def get_embeddings(frame, scrfd, arcface, score_threshold=0.5):
+def get_embeddings(frame, scrfd, arcface, score_threshold=0.65):
     """Run the full detect + align + embed pipeline on one frame.
     Returns a list of dicts: {"embedding": 512-d np array, "box": ..., "score": ...}
     (one entry per detected face, using the project's own SCRFD + ArcFace engines)."""
@@ -26,6 +28,10 @@ def get_embeddings(frame, scrfd, arcface, score_threshold=0.5):
     detections = detect_faces(outputs, score_threshold=score_threshold)
     if not detections:
         return []
+    # TEMPORARY DEBUG -- remove once you've captured the false-positive score
+    for det in detections:
+        if det["score"] < 0.7:
+            logger.info(f"DEBUG: SCRFD detection score={det['score']:.4f}, box={det['box']}")
 
     # scaling the detected area to original scale
     detections = scale_detections(detections, orig_w, orig_h)
