@@ -31,12 +31,12 @@ ALEXA_NOTIFY_ENTITIES = ["notify.anish_echo_show_announce", "notify.anish_s_echo
 #ALEXA_NOTIFY_ENTITIES = ["notify.anish_echo_show_speak"]
 GATE_COOLDOWN_SECONDS = 10 # 10 sec
 # Reduce load on Jetson to reduce the running of GPU if there is no change in pixel
-IDLE_INTERVAL = 3.0      # when nothing's around
+IDLE_INTERVAL = 1.5    # when nothing's around
 ACTIVE_INTERVAL = 1.0  # your existing 1.0, once something's detected
 
 MOTION_THRESHOLD = 25
 MOTION_MIN_CHANGED_FRACTION = 0.01
-FORCE_CHECK_EVERY = 10  # seconds -- run a real detection check on this cadence
+FORCE_CHECK_EVERY = 5   # seconds -- run a real detection check on this cadence
                         # even with no motion, so a stationary person still
                         # eventually gets recognized
 
