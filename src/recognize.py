@@ -8,11 +8,15 @@ sys.path.append(os.path.dirname(__file__))
 from trt_infer import TRTEngine
 from utils import bgr_to_model_input
 from scrfd_utils import detect_faces, scale_detections
-from config import SCRFD_ENGINE, ARCFACE_ENGINE, DB_PATH
+from config import SCRFD_ENGINE, ARCFACE_ENGINE, DB_PATH, IGNORE_ZONES
 import logging
 logger = logging.getLogger("door-watchman")
 
 TEST_IMAGE = os.path.expanduser("~/door-watchman/test_image.jpg")
+
+def _in_ignore_zone(box):
+    cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
+    return any(x1 <= cx <= x2 and y1 <= cy <= y2 for x1, y1, x2, y2 in IGNORE_ZONES)
 
 def get_embeddings(frame, scrfd, arcface, score_threshold=0.65):
     """Run the full detect + align + embed pipeline on one frame.
@@ -28,13 +32,21 @@ def get_embeddings(frame, scrfd, arcface, score_threshold=0.65):
     detections = detect_faces(outputs, score_threshold=score_threshold)
     if not detections:
         return []
-    # TEMPORARY DEBUG -- remove once you've captured the false-positive score
-    for det in detections:
-        if det["score"] < 0.7:
-            logger.info(f"DEBUG: SCRFD detection score={det['score']:.4f}, box={det['box']}")
 
     # scaling the detected area to original scale
     detections = scale_detections(detections, orig_w, orig_h)
+
+    # drop detections centered in a known false-positive zone, but log them
+    kept = []
+    for d in detections:
+        if _in_ignore_zone(d["box"]):
+            logger.info(f"Ignored detection in zone: score={d['score']:.3f} "
+                        f"box={[int(v) for v in d['box']]}")
+        else:
+            kept.append(d)
+    detections = kept
+    if not detections:
+        return []
 
     results = []
     # Run arcface on each detection area
@@ -59,8 +71,6 @@ def get_embeddings(frame, scrfd, arcface, score_threshold=0.65):
         })
 
     return results
-
-import cv2
 
 def is_face_usable(frame, box, min_size=60, blur_threshold=50.0):
     """Reject a detected face crop that's too small or too blurry to
