@@ -8,9 +8,9 @@ sys.path.append(os.path.dirname(__file__))
 from trt_infer import TRTEngine
 from utils import bgr_to_model_input
 from scrfd_utils import detect_faces, scale_detections
-from config import SCRFD_ENGINE, ARCFACE_ENGINE, DB_PATH, IGNORE_ZONES
+from config import SCRFD_ENGINE, ARCFACE_ENGINE, DB_PATH, IGNORE_ZONES, DETECTION_THRESHOLD
 import logging
-logger = logging.getLogger("door-watchman")
+logger = logging.getLogger("door_watchman")
 
 TEST_IMAGE = os.path.expanduser("~/door-watchman/test_image.jpg")
 
@@ -18,7 +18,7 @@ def _in_ignore_zone(box):
     cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
     return any(x1 <= cx <= x2 and y1 <= cy <= y2 for x1, y1, x2, y2 in IGNORE_ZONES)
 
-def get_embeddings(frame, scrfd, arcface, score_threshold=0.65):
+def get_embeddings(frame, scrfd, arcface, score_threshold=DETECTION_THRESHOLD):
     """Run the full detect + align + embed pipeline on one frame.
     Returns a list of dicts: {"embedding": 512-d np array, "box": ..., "score": ...}
     (one entry per detected face, using the project's own SCRFD + ArcFace engines)."""

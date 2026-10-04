@@ -43,4 +43,9 @@ FORCE_CHECK_EVERY = 5   # seconds -- run a real detection check on this cadence
 LOG_PATH = os.path.expanduser("~/door-watchman/live_pipeline.log")
 LOG_IDLE_EVERY = 60  # seconds -- log a heartbeat this often while idle, not every cycle
 
-IGNORE_ZONES = [(1150, 0, 1800, 450)]   # front of the car at the top of the driveway
+IGNORE_ZONES = [(1150, 0, 1800, 450),
+                (3300, 500, 3700, 800),
+]   # ignore zones that are further from the door 
+
+DETECTION_THRESHOLD = 0.5 # Reduce the detection threshold and 
+                          # use ignore zones to take out false detections of the car

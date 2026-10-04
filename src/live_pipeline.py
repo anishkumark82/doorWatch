@@ -7,7 +7,7 @@ from motion import MotionGate
 from config import (SCRFD_ENGINE, ARCFACE_ENGINE, DB_PATH, GO2RTC_STREAM, CLIP_ENGINE, 
                     CLIP_TEXT_EMBEDDINGS_PATH, VISITOR_PHOTOS_DIR, IDLE_INTERVAL, 
                     ACTIVE_INTERVAL, MOTION_THRESHOLD, MOTION_MIN_CHANGED_FRACTION, 
-                    FORCE_CHECK_EVERY, LOG_PATH, LOG_IDLE_EVERY, GATE_COOLDOWN_SECONDS)
+                    FORCE_CHECK_EVERY, LOG_PATH, LOG_IDLE_EVERY, GATE_COOLDOWN_SECONDS, DETECTION_THRESHOLD)
 from recognize import get_embeddings, load_face_db, match_embedding
 from classify import DeliveryClassifier
 from notify import build_announcement, AnnouncementGate, speak_announcement, send_push_notification
@@ -133,7 +133,7 @@ def main():
             # Get embeddings for the current image 
             # 1. Run Scarfd [3 scales] to determine faces [boxes, landmarks]
             # 2. Run arcface to get the embeddings 
-            results = get_embeddings(frame, scrfd, arcface)
+            results = get_embeddings(frame, scrfd, arcface, score_threshold=DETECTION_THRESHOLD)
 
             if results:
                 outcomes_this_frame = []

@@ -4,7 +4,7 @@ import pycuda.autoinit
 import numpy as np
 
 import logging
-logger = logging.getLogger("door-watchman")
+logger = logging.getLogger("door_watchman")
 
 TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
 
