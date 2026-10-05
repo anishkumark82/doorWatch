@@ -47,5 +47,5 @@ IGNORE_ZONES = [(1150, 0, 1800, 450),
                 (3300, 500, 3700, 800),
 ]   # ignore zones that are further from the door 
 
-DETECTION_THRESHOLD = 0.5 # Reduce the detection threshold and 
+DETECTION_THRESHOLD = 0.65 # Reduce the detection threshold and 
                           # use ignore zones to take out false detections of the car
